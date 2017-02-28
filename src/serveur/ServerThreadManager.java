@@ -67,7 +67,7 @@ class ServerThreadManager implements Runnable {
 //	        os.println("" + n*n ); 
 		    
 	
-			    System.out.println( "Connection " + id + " fermé." );
+			    System.out.println( "Connection " + id + " fermée." );
 			    br.close();
 			    pw.close();
 			    // os.close();

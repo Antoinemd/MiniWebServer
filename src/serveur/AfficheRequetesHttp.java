@@ -25,7 +25,6 @@ public class AfficheRequetesHttp {
 	}
 	
 	private String pathToGet(String line, int lengthOfRequest){
-		//TODO modifer avec un resolvePath()
 		return line.substring(lengthOfRequest+1,line.length()-9);
 	}
 	
@@ -41,22 +40,33 @@ public class AfficheRequetesHttp {
 		return relative; 
 	}
 	
-	private String listingFilesAndDirectory(File f){
+	private String listingFilesAndDirectory(File f, Path pathProject){
 		
 		File[] listOfFiles = f.listFiles(); 					// contenu du répertoire dans un tableau de fichiers
 		StringBuilder contenuRep = new StringBuilder();			// listing sous forme de chaine de carractères
-		File folderIcon = new File("src/serveur/folder.png");	// image de dossier
-		File fileIcon = new File("src/serveur/file.png");		// image de fichier
 		
-		contenuRep.append("<a href ='" + f.getParent() + "'> " +
-				"<img src='"+folderIcon.getAbsolutePath()+"' width='25' height='25' /> &nbsp" + " <- Dossier Parent</a><br/><br/>");
+//		File folderIcon = new File("folder.png");	// image de dossier  vielle version non flexible
+//		File fileIcon = new File("file.png");		// image de fichier  vielle version non flexible
+		
+		Path folderIcon = pathProject.resolve(new File("folder.png").toString());
+		Path fileIcon = pathProject.resolve(new File("file.png").toString());
+		System.out.println(pathProject.resolve(folderIcon.toString()));
+		
+		if (f.toString().equals("/")) {
+			contenuRep.append("<a href ='/'> Root: / </a> <br/><br/>");
+		} else {
+			contenuRep.append("<a href ='" + f.getParent() + "'> " +
+				"<img src='"+folderIcon.toString()+"' width='25' height='25' /> &nbsp" + 
+				" <- Dossier Parent</a><br/><br/>");	
+		}
+		
 		for (File file : listOfFiles) {
 			if (file.isFile()) {
-				contenuRep.append(("<img src='"+ fileIcon.getAbsolutePath() +"' width='25' height='25' /> &nbsp" + 
+				contenuRep.append(("<img src='"+ fileIcon.toString() +"' width='25' height='25' /> &nbsp" + 
 									"<a href ='"+ file.getAbsolutePath() +"'>" + file.getName() + "</a><br/>"));
 			}
 			if (file.isDirectory()) {
-				contenuRep.append(("<img src='"+ folderIcon.getAbsolutePath() +"' width='25' height='25' /> &nbsp" + 
+				contenuRep.append(("<img src='"+ folderIcon.toString() +"' width='25' height='25' /> &nbsp" + 
 									"<a href ='" + file.getAbsolutePath() + "'>" + file.getName() + "</a><br/>"));
 			}
 		}// end of: forEach		
@@ -73,13 +83,13 @@ public class AfficheRequetesHttp {
 		return decodedUrl;
 	}
 	
-	private void traitementFichiers ( File f, Path ressPath,
+	private void traitementFichiers ( File f, Path ressPath, Path pathProject,
 										PrintWriter pw, Socket socket ) throws IOException {
     	if(f.exists()) {			    		
     		if (f.isDirectory()) {
     			String mimeType = Files.probeContentType(ressPath);
 	    		pw.println(envoyerHeaderHTML(mimeType, "200 OK"));
-				pw.println(listingFilesAndDirectory(f));
+				pw.println(listingFilesAndDirectory(f, pathProject));
 			} else {// sinon c'est un fichier
 				if (Files.isRegularFile(ressPath)) {
 					// marche que sur Chrome ...
@@ -90,25 +100,25 @@ public class AfficheRequetesHttp {
 	}
 	
 	
-	private void traitementRequeteGet(String line, String typeDeRequete, 
+	private void traitementRequeteGet(String line, String typeDeRequete, Path pathProject,
 										PrintWriter pw, Socket socket) throws IOException {
 		
 	    	Path ressPath =  Paths.get(pathToGet(line, typeDeRequete.length()));	// récupération du path
 	    	String ressStr = pathUtf8(ressPath);			    	
 	    	File f = new File(ressStr);
-	    	traitementFichiers(f, ressPath, pw, socket);
+	    	traitementFichiers(f, ressPath, pathProject, pw, socket);
 	}
 	
 	
-	public void traitementDesRequetes(String line, String typeDeRequete,
+	public void traitementDesRequetes(String line, String typeDeRequete, Path pathProject,
 										PrintWriter pw, Socket socket) throws IOException {
 		if (typeDeRequete.equals("GET".toLowerCase())){
-			traitementRequeteGet(line, typeDeRequete, pw, socket);   	
+			traitementRequeteGet(line, typeDeRequete, pathProject, pw, socket);   	
 		} else { System.out.println("Autre type de requete ");} // autre type de requete que GET
 	}
 	
 	
-	public void receptionRequete(String line, BufferedReader br, PrintWriter pw, Socket socket) throws IOException {
+	public void receptionRequete(String line, BufferedReader br, PrintWriter pw, Socket socket, Path pathProject) throws IOException {
 
 		System.out.println("----DEBUT REQUETE----");
 		
@@ -117,7 +127,7 @@ public class AfficheRequetesHttp {
 		while(!"".equals(line) && line != null){	// != null pour éviter les plantages
 			System.out.println(line); 				// First line of the header request
 			String typeRequest = typeDeRequete(line);
-			traitementDesRequetes(line, typeRequest, pw, socket);
+			traitementDesRequetes(line, typeRequest, pathProject, pw, socket);
 			line = br.readLine();					// next line of the header request		
 		}
 		
@@ -125,7 +135,7 @@ public class AfficheRequetesHttp {
 		System.out.println();
 	}
 	
-	private void startServeurSimple(ServerSocket serverSocket) throws IOException {
+	private void startServeurSimple(ServerSocket serverSocket, Path pathProject) throws IOException {
 		
 		while( true ) { 
 			Socket socket = serverSocket.accept();
@@ -134,7 +144,7 @@ public class AfficheRequetesHttp {
 			String line = null;
 
 			
-			receptionRequete(line, br, pw, socket);			
+			receptionRequete(line, br, pw, socket, pathProject);			
 			
 			br.close();
 			pw.flush();
@@ -143,12 +153,12 @@ public class AfficheRequetesHttp {
 		}
 	}
 	
-	
 	public static void main(String[] args) throws IOException {
-		
+		//TODO refaire la classe avec des attributs de classe: path,br,pw, etc..
 		AfficheRequetesHttp SimpleServeur = new AfficheRequetesHttp();
 		ServerSocket serverSocket = new ServerSocket(8080);
+		Path pathProject = Paths.get("/home/antoine/workspaces/workspace2/MiniWebServer/src/serveur/");
 
-		SimpleServeur.startServeurSimple(serverSocket);
+		SimpleServeur.startServeurSimple(serverSocket, pathProject);
 		}
 	}
