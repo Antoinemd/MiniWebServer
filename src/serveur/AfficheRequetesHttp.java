@@ -157,6 +157,7 @@ public class AfficheRequetesHttp {
 		//TODO refaire la classe avec des attributs de classe: path,br,pw, etc..
 		AfficheRequetesHttp SimpleServeur = new AfficheRequetesHttp();
 		ServerSocket serverSocket = new ServerSocket(8080);
+    	// TODO path à modifier selon utilisateur
 		Path pathProject = Paths.get("/home/antoine/workspaces/workspace2/MiniWebServer/src/serveur/");
 
 		SimpleServeur.startServeurSimple(serverSocket, pathProject);

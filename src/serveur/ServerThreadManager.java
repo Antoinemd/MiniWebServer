@@ -2,6 +2,7 @@ package serveur;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Path;
 
 class ServerThreadManager implements Runnable {
 	
@@ -11,13 +12,14 @@ class ServerThreadManager implements Runnable {
     Socket clientSocket;
     int id;
     ServerMultiThread server;
+    Path pathProject;	// attribut "lien" avec l'auter classe
 
     public ServerThreadManager(Socket clientSocket, int id, ServerMultiThread server) {
     	
 		this.clientSocket = clientSocket;	// socket
 		this.id = id;						// id de la connection
 		this.server = server;				// server
-		
+		this.pathProject = server.getterPathProject();
 		System.out.println( "Connexion " + id + " établie avec: " + clientSocket );
 		
 		try {
@@ -49,7 +51,7 @@ class ServerThreadManager implements Runnable {
 		    	while(!"".equals(line) && line != null){	// != null pour éviter les plantages
 					System.out.println(line); 				// première ligne du header
 					String typeRequest = Thread.typeDeRequete(line);
-					Thread.traitementDesRequetes(line, typeRequest, pw, clientSocket);
+					Thread.traitementDesRequetes(line, typeRequest, pathProject, pw, clientSocket);
 					line = br.readLine();					// ligne suivante du header		
 				}
 				

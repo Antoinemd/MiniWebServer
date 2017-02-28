@@ -2,6 +2,8 @@ package serveur;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 
 public class ServerMultiThread {
@@ -13,9 +15,15 @@ public class ServerMultiThread {
     Socket clientSocket = null;
     int numConnections = 0;
     int port;
-    
-    public ServerMultiThread( int port ) {
+	public Path pathProject = null;
+
+    public Path getterPathProject() {
+    	return this.pathProject;
+	}
+	
+    public ServerMultiThread( int port, Path pathProject ) {
     	this.port = port;
+    	this.pathProject = pathProject;
     }
     
     public void stopServer() {
@@ -54,9 +62,10 @@ public class ServerMultiThread {
     
 
     public static void main(String args[]) {
-    	
-		int port = 8080;											// Port d'écoute
-		ServerMultiThread server = new ServerMultiThread( port );	// Instanciation de l'objet ServerMultiThread
-		server.startServer();										// démarrage du serveur
+    	// TODO path à modifier selon utilisateur
+		Path pathProject = Paths.get("/home/antoine/workspaces/workspace2/MiniWebServer/src/serveur/");
+		int port = 8080;														// Port d'écoute
+		ServerMultiThread server = new ServerMultiThread( port, pathProject );	// Instanciation de l'objet ServerMultiThread
+		server.startServer();													// démarrage du serveur
     }
 }
