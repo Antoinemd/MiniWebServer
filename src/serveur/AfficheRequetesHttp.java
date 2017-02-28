@@ -6,44 +6,8 @@ import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-
-//import org.tpserver.HtmlPage;
-
-
-public class AfficheRequetesHttp implements Runnable{
+public class AfficheRequetesHttp {
 	
-	private Thread t;
-	private String threadName;
-	
-	public AfficheRequetesHttp(String name) {
-		threadName = name;
-		System.out.println("Cration du thread: " + threadName);
-	}
-	
-//	@Override
-	public void run() {
-	      System.out.println("Lancement " +  threadName );
-	      try {
-	    	  for(int i = 4; i > 0; i--) {
-	              System.out.println("Thread: " + threadName + ", " + i);
-	              // Let the thread sleep for a while.
-	              Thread.sleep(50);
-	           }			
-		} catch (InterruptedException e) {
-	         System.out.println("Thread " +  threadName + " interrompue.");		
-	    }
-	      System.out.println("Thread " +  threadName + " en cours d'arret.");
-	}
-
-	public void start () {
-		System.out.println("Lancement " +  threadName );
-	    if (t == null) {
-	    	t = new Thread (this, threadName);
-	        t.start ();
-	    }
-	}
-	
-		
 	/**
 	 * Retourne l'heure pour headers HTTP
 	 * 
@@ -56,7 +20,7 @@ public class AfficheRequetesHttp implements Runnable{
 		return dateFormat.format(calendar.getTime());
 	}
 	
-	private String typeDeRequete(String line){
+	public String typeDeRequete(String line){
 		return line.substring(0, line.indexOf(" ")).toLowerCase(); 
 	}
 	
@@ -71,17 +35,29 @@ public class AfficheRequetesHttp implements Runnable{
 						"Content-Type: " + mimeType + "; charset=UTF-8" + "Expires: -1" + "\n");
 	}
 	
-	private String listingFilesOfDirectory(File f){
-		// Listing du contenu du répertoire
-		File[] listOfFiles = f.listFiles();
-		StringBuilder contenuRep = new StringBuilder();
-		contenuRep.append("<a href ='" + f.getParent() + "'>" + " <- Dossier Parent </a> <br/> <br/>");
+	public String relativizePath(String path, String base){
+		String relative = new File(base).toURI().relativize(new File(path).toURI()).getPath();
+		System.out.println("relativized :"+relative);
+		return relative; 
+	}
+	
+	private String listingFilesAndDirectory(File f){
+		
+		File[] listOfFiles = f.listFiles(); 					// contenu du répertoire dans un tableau de fichiers
+		StringBuilder contenuRep = new StringBuilder();			// listing sous forme de chaine de carractères
+		File folderIcon = new File("src/serveur/folder.png");	// image de dossier
+		File fileIcon = new File("src/serveur/file.png");		// image de fichier
+		
+		contenuRep.append("<a href ='" + f.getParent() + "'> " +
+				"<img src='"+folderIcon.getAbsolutePath()+"' width='25' height='25' /> &nbsp" + " <- Dossier Parent</a><br/><br/>");
 		for (File file : listOfFiles) {
 			if (file.isFile()) {
-				contenuRep.append(("<a href ='" + file.getAbsolutePath() + "'>" + file.getName() + "</a><br/>"));
+				contenuRep.append(("<img src='"+ fileIcon.getAbsolutePath() +"' width='25' height='25' /> &nbsp" + 
+									"<a href ='"+ file.getAbsolutePath() +"'>" + file.getName() + "</a><br/>"));
 			}
 			if (file.isDirectory()) {
-				contenuRep.append(("<a href ='" + file.getAbsolutePath() + "'>" + file.getName() + "</a><br/>"));
+				contenuRep.append(("<img src='"+ folderIcon.getAbsolutePath() +"' width='25' height='25' /> &nbsp" + 
+									"<a href ='" + file.getAbsolutePath() + "'>" + file.getName() + "</a><br/>"));
 			}
 		}// end of: forEach		
 		return contenuRep.toString();
@@ -90,7 +66,7 @@ public class AfficheRequetesHttp implements Runnable{
 	private String pathUtf8 ( Path p ) {
 		String decodedUrl = null;
 		try {
-			decodedUrl = URLDecoder.decode(p.toString(), "UTF-8"); //use this instead
+			decodedUrl = URLDecoder.decode(p.toString(), "UTF-8");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -103,29 +79,28 @@ public class AfficheRequetesHttp implements Runnable{
     		if (f.isDirectory()) {
     			String mimeType = Files.probeContentType(ressPath);
 	    		pw.println(envoyerHeaderHTML(mimeType, "200 OK"));
-				pw.println(listingFilesOfDirectory(f));
-			} else {														// sinon c'est un fichier
+				pw.println(listingFilesAndDirectory(f));
+			} else {// sinon c'est un fichier
 				if (Files.isRegularFile(ressPath)) {
 					// marche que sur Chrome ...
 					Files.copy(ressPath, socket.getOutputStream());
 				} else { System.out.println("File isn't regular."); }
-			}																// enf of: if(isDirectory / isFile)
-    	} else { pw.println(envoyerHeaderHTML("text/html", "404 NOT FOUND")); }// erreur 404
+			}		// enf of: if(isDirectory / isFile)
+    	} else { pw.println(envoyerHeaderHTML("text/html", "404 NOT FOUND")); }	// erreur 404
 	}
 	
 	
 	private void traitementRequeteGet(String line, String typeDeRequete, 
 										PrintWriter pw, Socket socket) throws IOException {
 		
-			pathToGet(line, typeDeRequete.length());			// récupération du path
-	    	Path ressPath =  Paths.get(pathToGet(line, typeDeRequete.length()));	
+	    	Path ressPath =  Paths.get(pathToGet(line, typeDeRequete.length()));	// récupération du path
 	    	String ressStr = pathUtf8(ressPath);			    	
 	    	File f = new File(ressStr);
 	    	traitementFichiers(f, ressPath, pw, socket);
 	}
 	
 	
-	private void traitementDesRequetes(String line, String typeDeRequete,
+	public void traitementDesRequetes(String line, String typeDeRequete,
 										PrintWriter pw, Socket socket) throws IOException {
 		if (typeDeRequete.equals("GET".toLowerCase())){
 			traitementRequeteGet(line, typeDeRequete, pw, socket);   	
@@ -133,8 +108,8 @@ public class AfficheRequetesHttp implements Runnable{
 	}
 	
 	
-	public void receptionRequete(String line, BufferedReader br, 
-									PrintWriter pw, Socket socket) throws IOException {
+	public void receptionRequete(String line, BufferedReader br, PrintWriter pw, Socket socket) throws IOException {
+
 		System.out.println("----DEBUT REQUETE----");
 		
 		line = br.readLine();						// On arrête à la fin des entête qui est définie comme une ligne vide	
@@ -150,38 +125,30 @@ public class AfficheRequetesHttp implements Runnable{
 		System.out.println();
 	}
 	
-	
-	public static void main(String[] args) throws IOException {
-		ServerSocket serverSocket = new ServerSocket(8080);
+	private void startServeurSimple(ServerSocket serverSocket) throws IOException {
 		
 		while( true ) { 
 			Socket socket = serverSocket.accept();
 			BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
 			String line = null;
-			AfficheRequetesHttp objRequest= new AfficheRequetesHttp("Thread-1");
+
 			
-			objRequest.receptionRequete(line, br, pw, socket);
-//			System.out.println("----DEBUT REQUETE----");
-//			
-//			line = br.readLine();						// On arrête à la fin des entête qui est définie comme une ligne vide	
-//			
-//			while(!"".equals(line) && line != null){	// != null pour éviter les plantages
-//				System.out.println(line); 				// First line of the header request
-//				String typeRequest = objRequest.typeDeRequete(line);
-//				objRequest.traitementDesRequetes(line, typeRequest, w, socket);
-//				line = br.readLine();					// next line of the header request		
-//			}
-//			
-//			System.out.println("----FIN REQUETE----");
-//			System.out.println();
-			
+			receptionRequete(line, br, pw, socket);			
 			
 			br.close();
+			pw.flush();
     		pw.close();
 			socket.close();
-			}
 		}
+	}
+	
+	
+	public static void main(String[] args) throws IOException {
+		
+		AfficheRequetesHttp SimpleServeur = new AfficheRequetesHttp();
+		ServerSocket serverSocket = new ServerSocket(8080);
 
-
+		SimpleServeur.startServeurSimple(serverSocket);
+		}
 	}
